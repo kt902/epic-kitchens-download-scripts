@@ -5,6 +5,7 @@ import csv
 import shutil
 import sys
 import warnings
+from tqdm import tqdm
 
 try:
     import urllib.request
@@ -69,11 +70,22 @@ class EpicDownloader:
 
         try:
             with urllib.request.urlopen(url) as response, open(output_path, 'wb') as output_file:
-                print('Downloading\nfrom  {}\nto    {}'.format(url, output_path))
-                shutil.copyfileobj(response, output_file)
-        except Exception as e:
-            print('Could not download file from {}\nError: {}'.format(url, str(e)))
 
+                total_size = int(response.info().get('Content-Length', 0))
+                block_size = 8192
+
+                print('Downloading\nfrom  {}\nto    {}'.format(url, output_path))
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc=f'{os.path.basename(output_path)}') as pbar:
+                    while True:
+                        buffer = response.read(block_size)
+                        if not buffer:
+                            break
+
+                        output_file.write(buffer)
+                        pbar.update(len(buffer))
+
+        except Exception as e:
+            print(f'Could not download file from {url}\nError: {str(e)}')
     @staticmethod
     def parse_bool(b):
         return b.lower().strip() in ['true', 'yes', 'y']
